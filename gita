@@ -1,0 +1,142 @@
+#!/usr/bin/env python3
+import os
+import sys
+import shutil
+import subprocess
+from pathlib import Path
+from rich.console import Console
+
+console = Console()
+
+# Core Paths
+GITA_DIR = Path.home() / ".gita"
+SCRIPTS_DIR = GITA_DIR / "scripts"
+TEMPLATES_DIR = GITA_DIR / "templates"
+PUSHES_DIR = GITA_DIR / "pushes"
+
+def setup_gita_environment():
+    """Ensures directories exist and builds default templates if missing."""
+    SCRIPTS_DIR.mkdir(parents=True, exist_ok=True)
+    TEMPLATES_DIR.mkdir(parents=True, exist_ok=True)
+    PUSHES_DIR.mkdir(parents=True, exist_ok=True)
+    
+    # Generate default stock NPM Template if missing
+    npm_default = TEMPLATES_DIR / "npm_app"
+    if not npm_default.exists():
+        npm_default.mkdir(exist_ok=True)
+        (npm_default / "package.json").write_text('{\n  "name": "gita-npm-project",\n  "version": "1.0.0",\n  "main": "index.js"\n}')
+        (npm_default / "index.js").write_text('console.log("Hello from Gita NPM template!");')
+
+def handle_push(push_name):
+    """Copies current folder state to ~/.gita/pushes/{push_name}"""
+    current_dir = Path.cwd()
+    target_dir = PUSHES_DIR / push_name
+    
+    console.print(f"[yellow]Pushing current folder state to storage as:[/yellow] [bold cyan]{push_name}[/bold cyan]")
+    
+    if target_dir.exists():
+        shutil.rmtree(target_dir)
+        
+    try:
+        shutil.copytree(current_dir, target_dir, ignore=shutil.ignore_patterns('.gita', '.git'))
+        console.print(f"[bold green]Successfully pushed![/bold green] Saved in pushes/{push_name}")
+    except Exception as e:
+        console.print(f"[bold red]Push failed:[/bold red] {e}")
+
+def handle_pull(target_string):
+    """Parses 'folder-name/push-name' and extracts it from pushes folder."""
+    if "/" not in target_string:
+        console.print("[bold red]Error:[/bold red] Pull format must be: [bold cyan]destination-folder/push-name[/bold cyan]")
+        return
+        
+    dest_folder_name, push_name = target_string.split("/", 1)
+    source_push = PUSHES_DIR / push_name
+    destination_dir = Path.cwd() / dest_folder_name
+    
+    if not source_push.exists():
+        console.print(f"[bold red]Error:[/bold red] Push snapshot '[cyan]{push_name}[/cyan]' not found.")
+        return
+        
+    console.print(f"[yellow]Pulling snapshot '[cyan]{push_name}[/cyan]' into folder '[magenta]{dest_folder_name}[/magenta]'...[/yellow]")
+    
+    try:
+        shutil.copytree(source_push, destination_dir)
+        console.print(f"[bold green]Successfully pulled![/bold green] Created at: {destination_dir}")
+    except FileExistsError:
+        console.print(f"[bold red]Error:[/bold red] The folder '{dest_folder_name}' already exists here.")
+    except Exception as e:
+        console.print(f"[bold red]Pull failed:[/bold red] {e}")
+
+def handle_template_list():
+    """Lists all available templates inside ~/.gita/templates/"""
+    if not TEMPLATES_DIR.exists() or not any(TEMPLATES_DIR.iterdir()):
+        console.print("[bold yellow]No templates found in ~/.gita/templates/[/bold yellow]")
+        return
+
+    console.print("[bold green]Available Gita Templates:[/bold green]")
+    for item in TEMPLATES_DIR.iterdir():
+        if item.is_dir():
+            console.print(f"  • [cyan]{item.name}[/cyan]")
+
+def handle_template_apply(template_name):
+    """Applies a base template folder straight to the current working directory."""
+    source_template = TEMPLATES_DIR / template_name
+    
+    if not source_template.exists():
+        console.print(f"[bold red]Error:[/bold red] Template '[cyan]{template_name}[/cyan]' does not exist in templates/.")
+        return
+        
+    console.print(f"[yellow]Applying base template '[cyan]{template_name}[/cyan]' here...[/yellow]")
+    
+    try:
+        for item in source_template.iterdir():
+            if item.is_dir():
+                shutil.copytree(item, Path.cwd() / item.name)
+            else:
+                shutil.copyfile(item, Path.cwd() / item.name)
+        console.print(f"[bold green]Template '{template_name}' applied successfully![/bold green]")
+    except Exception as e:
+        console.print(f"[bold red]Failed to apply template:[/bold red] {e}")
+
+def handle_run_script(script_name):
+    """Executes a custom shell script stored in ~/.gita/scripts/"""
+    script_path = SCRIPTS_DIR / script_name
+    if not script_path.exists():
+        console.print(f"[bold red]Error:[/bold red] Script '[cyan]{script_name}[/cyan]' not found in scripts/.")
+        return
+    console.print(f"[yellow]Running script:[/yellow] [bold magenta]{script_name}[/bold magenta]\n")
+    subprocess.run(["bash", str(script_path)])
+
+def main():
+    setup_gita_environment()
+    
+    if len(sys.argv) < 2:
+        console.print("[bold yellow]Gita CLI Syntax Engine:[/bold yellow]")
+        console.print("  [bold yellow]gita its like git but you can pull push's from every folder in your computer[/bold yellow]")
+        console.print("  [bold yellow]and you can create templates in the tamplates folder in ~/.gita/templates[/bold yellow]")
+        console.print("  [bold yellow]you create there a folder and the folder name is the name that you put after the -t[/bold yellow]")
+        console.print("  [bold yellow]the run command its for custom automation you have README.md in the ~/.gita/scripts/ folder there you put the custom automations[/bold yellow]")
+        console.print("  gita push {push-name}  --- the push name will be used for the pull after that so put a name that you will remember")
+        console.print("  gita pull {folder-name}/{push-name}  --- we use the folder name so if you did more then 1 push with the same name the script will know wich one to take")
+        console.print("  gita -t {template-folder-name}  --- the template folder name in ~/.gita/templates/")
+        console.print("  gita run {script-name}  --- with that command you can run automations like to run a script form the desktop and the script it in another folder")
+        return
+
+    command = sys.argv[1]
+
+    if command == "push" and len(sys.argv) == 3:
+        handle_push(sys.argv[2])
+    elif command == "pull" and len(sys.argv) == 3:
+        handle_pull(sys.argv[2])
+    elif command == "-t" and len(sys.argv) == 3:
+        if sys.argv[2] == "-ls":
+            handle_template_list()
+        else:
+            handle_template_apply(sys.argv[2])
+    elif command == "run" and len(sys.argv) == 3:
+        handle_run_script(sys.argv[2])
+    else:
+        console.print("[bold red]Invalid command syntax.[/bold red] Use options: push, pull, -t, or run.")
+
+if __name__ == "__main__":
+    main()
