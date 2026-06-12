@@ -41,9 +41,23 @@ Rules for creating automations:
 3. Make it an executable binary program: `chmod +x ~/.gita/scripts/{script-name}`
 EOF
 
-# 3. Pull Core Engine Script from Network Stream
-echo -e "\e[1;32m[3/4]\e[0m Downloading core python runtime engine to system binary trees..."
-sudo curl -sSL "https://raw.githubusercontent.com/guyka2212/gita/main/gita" -o /usr/local/bin/gita
+# 3. Deploy Core Engine — local file if available, otherwise pull from GitHub
+echo -e "\e[1;32m[3/4]\e[0m Installing gita runtime engine..."
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Backup existing installation if present
+if [ -f /usr/local/bin/gita ]; then
+    sudo cp /usr/local/bin/gita /usr/local/bin/gita.bak
+    echo -e "\e[1;34m  └─ Backed up previous version to /usr/local/bin/gita.bak\e[0m"
+fi
+
+if [ -f "$SCRIPT_DIR/gita" ]; then
+    echo -e "\e[1;34m  └─ Using local gita engine found at $SCRIPT_DIR/gita\e[0m"
+    sudo cp "$SCRIPT_DIR/gita" /usr/local/bin/gita
+else
+    echo -e "\e[1;34m  └─ Downloading gita engine from GitHub...\e[0m"
+    sudo curl -sSL "https://raw.githubusercontent.com/guyka2212/gita/main/gita" -o /usr/local/bin/gita
+fi
 sudo chmod +x /usr/local/bin/gita
 
 # 4. Resolve Runtime Visualization Dependencies
