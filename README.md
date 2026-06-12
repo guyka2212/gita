@@ -1,11 +1,11 @@
 <div align="center">
   <pre>
-  ________.__  __
-  /  _____/|__|/  |______
- /   \  ___|  \   __\__  \
- \    \_\  \  ||  |  / __ \_
-  \______  /__||__| (____  /
-         \/              \/
+    ________.___________________   
+ /  _____/|   \__    ___/  _  \  
+/   \  ___|   | |    | /  /_\  \ 
+\    \_\  \   | |    |/    |    \
+ \______  /___| |____|\____|__  /
+        \/                    \/ 
   </pre>
   <h1>🐙 Gita</h1>
   <p><strong>Portable project snapshots, templates & automation — from anywhere, for anywhere.</strong></p>
