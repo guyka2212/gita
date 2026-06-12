@@ -133,7 +133,7 @@ def main():
             handle_template_list()
         else:
             handle_template_apply(sys.argv[2])
-    elif command == "install-plugin" and len(sys.argv) == 4:
+    elif command == "PlugInstall" and len(sys.argv) == 4:
         plugin_url = sys.argv[2]
         plugin_name = sys.argv[3]
         handle_run_script("plugin-install", [plugin_url, plugin_name])
