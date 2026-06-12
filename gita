@@ -107,6 +107,18 @@ def handle_run_script(script_name):
     console.print(f"[yellow]Running script:[/yellow] [bold magenta]{script_name}[/bold magenta]\n")
     subprocess.run(["bash", str(script_path)])
 
+def handle_plug_install(url, name):
+    """Downloads a script from a URL and installs it into ~/.gita/scripts/"""
+    import urllib.request
+    target = SCRIPTS_DIR / name
+    console.print(f"[yellow]Downloading plugin from:[/yellow] [cyan]{url}[/cyan]")
+    try:
+        urllib.request.urlretrieve(url, target)
+        target.chmod(0o755)
+        console.print(f"[bold green]Plugin '{name}' installed to ~/.gita/scripts/{name}[/bold green]")
+    except Exception as e:
+        console.print(f"[bold red]Failed to install plugin:[/bold red] {e}")
+
 def main():
     setup_gita_environment()
     
@@ -120,6 +132,7 @@ def main():
         console.print("  gita pull {folder-name}/{push-name}  --- we use the folder name so if you did more then 1 push with the same name the script will know wich one to take")
         console.print("  gita -t {template-folder-name}  --- the template folder name in ~/.gita/templates/")
         console.print("  gita run {script-name}  --- with that command you can run automations like to run a script form the desktop and the script it in another folder")
+        console.print("  gita run PlugInstall {url} {name}  --- download a script from a URL and install it to ~/.gita/scripts/")
         return
 
     command = sys.argv[1]
@@ -133,14 +146,13 @@ def main():
             handle_template_list()
         else:
             handle_template_apply(sys.argv[2])
-    elif command == "PlugInstall" and len(sys.argv) == 4:
-        plugin_url = sys.argv[2]
-        plugin_name = sys.argv[3]
-        handle_run_script("plugin-install", [plugin_url, plugin_name])
-    elif command == "run" and len(sys.argv) == 3:
-        handle_run_script(sys.argv[2])
+    elif command == "run" and len(sys.argv) >= 3:
+        if sys.argv[2] == "PlugInstall" and len(sys.argv) == 5:
+            handle_plug_install(sys.argv[3], sys.argv[4])
+        else:
+            handle_run_script(sys.argv[2])
     else:
-        console.print("[bold red]Invalid command syntax.[/bold red] Use options: push, pull, -t, or run.")
+        console.print("[bold red]Invalid command syntax.[/bold red] Use options: push, pull, -t, run, or run PlugInstall.")
 
 if __name__ == "__main__":
     main()
